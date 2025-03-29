@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disease Analysis Report - PlantGuard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary-color: #2c5f2d;
+      --secondary-color: #97bc62;
+      --accent-color: #f6f6f6;
+      --text-color: #333;
+      --card-shadow: 0 6px 20px rgba(0,0,0,0.08);
+      --transition-speed: 0.3s;
+    }
+    body {
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9f5e1 100%);
+      font-family: 'Poppins', sans-serif;
+      min-height: 100vh;
+      padding: 2rem;
+      color: var(--text-color);
+    }
+    .page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      position: relative;
+      padding-bottom: 1rem;
+    }
+    .page-header h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 0.5rem;
+    }
+    .page-header::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+      border-radius: 2px;
+    }
+    .disease-card {
+      background: #fff;
+      border: none;
+      border-radius: 15px;
+      box-shadow: var(--card-shadow);
+      transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .disease-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+    }
+    .disease-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-bottom: 3px solid var(--primary-color);
+      transition: transform var(--transition-speed) ease;
+    }
+    .disease-card:hover img {
+      transform: scale(1.05);
+    }
+    .disease-content {
+      padding: 1.5rem;
+    }
+    .disease-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+      position: relative;
+    }
+    .disease-title::after {
+      content: '';
+      position: absolute;
+      bottom: -0.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px;
+      height: 2px;
+      background: var(--secondary-color);
+    }
+    .disease-description {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #555;
+      margin-bottom: 1rem;
+    }
+    .disease-recommendation {
+      background: var(--accent-color);
+      padding: 1rem;
+      border-radius: 8px;
+      border-left: 4px solid var(--secondary-color);
+      font-size: 0.95rem;
+      color: #444;
+    }
+    .disease-recommendation strong {
+      color: var(--primary-color);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    .no-predictions {
+      text-align: center;
+      font-size: 1.2rem;
+      color: #666;
+      padding: 2rem;
+      background: #fff;
+      border-radius: 15px;
+      box-shadow: var(--card-shadow);
+    }
+    .animate-in {
+      animation: fadeInUp 3s ease forwards;
+    }
+    .location-info {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  padding: 1.5rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(46, 95, 45, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+  margin: 2rem 0;
+  color: white;
+  text-align: center;
+  animation: slideIn 0.8s ease-out forwards;
+}
+
+.location-info::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent 20%, rgba(255,255,255,0.1) 50%, transparent 80%);
+  animation: shine 4s infinite;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-50%) translateY(-50%) rotate(45deg); }
+  100% { transform: translateX(50%) translateY(50%) rotate(45deg); }
+}
+
+.location-info h4 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  position: relative;
+  display: inline-block;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.location-info h4 i {
+  margin-right: 12px;
+  color: #ffec99;
+  animation: bounce 2s infinite;
+}
+
+.location-info p {
+  font-size: 1.4rem;
+  font-weight: 500;
+  margin: 0;
+  letter-spacing: 0.5px;
+  position: relative;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .back-home {
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .back-home a {
+      font-size: 1.1rem;
+      text-decoration: none;
+      color: var(--primary-color);
+      border: 2px solid var(--primary-color);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .back-home a:hover {
+      background-color: var(--primary-color);
+      color: #fff;
+    }
+  </style>
+  <script>
+    // This dictionary exactly mirrors your DISEASE_LABELS
+    const diseaseDetails = {
+      "Apple___Apple_scab": {
+        description: "Apple scab is a common fungal disease affecting apple trees. It causes dark, scabby lesions on leaves and fruit.",
+        image: "static/images_path/Apple___Apple_scab.JPG"
+      },
+      "Apple___Black_rot": {
+        description: "Black rot is a serious fungal disease of apple trees, leading to fruit decay and leaf damage.",
+        image: "static/images_path/Apple___Black_rot.JPG"
+      },
+      "Apple___Cedar_apple_rust": {
+        description: "Cedar apple rust causes bright orange to rust-colored spots on apple leaves, often appearing during wet weather.",
+        image: "static/images_path/Apple___Cedar_apple_rust.JPG"
+      },
+      "Apple___healthy": {
+        description: "The apple appears healthy with no visible disease symptoms.",
+        image: "static/images_path/Apple___healthy.JPG"
+      },
+      "Cherry_(including_sour)___Powdery_mildew": {
+        description: "Powdery mildew in cherry trees produces a white, powdery growth on leaves and can affect fruit quality.",
+        image: "static/images_path/Cherry_(including_sour)___Powdery_mildew.JPG"
+      },
+      "Cherry_(including_sour)___healthy": {
+        description: "The cherry plant is healthy with no signs of disease.",
+        image: "static/images_path/Cherry_(including_sour)___healthy.JPG"
+      },
+      "Corn_(maize)___Common_rust_": {
+        description: "Common rust in corn is characterized by small, rust-colored pustules on leaves, which can reduce photosynthesis.",
+        image: "static/images_path/Corn_(maize)___Common_rust_.JPG"
+      },
+      "Corn_(maize)___Northern_Leaf_Blight": {
+        description: "Northern leaf blight causes long, elliptical lesions on corn leaves and can lead to significant yield loss.",
+        image: "static/images_path/Corn_(maize)___Northern_Leaf_Blight.JPG"
+      },
+      "Corn_(maize)___healthy": {
+        description: "The corn plant is healthy with no disease symptoms.",
+        image: "static/images_path/corn_maize_healthy.jpeg"
+      },
+      "Grape___Black_rot": {
+        description: "Black rot in grapes causes dark, sunken lesions on berries, leaves, and stems, often leading to fruit loss.",
+        image: "static/images_path/Grape___Black_rot.JPG"
+      },
+      "Grape___Esca_(Black_Measles)": {
+        description: "Esca (Black Measles) is a complex grapevine disease that can cause discoloration and decay in grapes.",
+        image: "static/images_path/Grape___Esca_(Black_Measles).JPG"
+      },
+      "Grape___Leaf_blight_(Isariopsis_Leaf_Spot)": {
+        description: "Leaf blight caused by Isariopsis results in spotted and sometimes necrotic areas on grape leaves.",
+        image: "static/images_path/Grape___Leaf_blight_(Isariopsis_Leaf_Spot).JPG"
+      },
+      "Grape___healthy": {
+        description: "The grape plant appears healthy without any disease signs.",
+        image: "static/images_path/Grape___healthy.JPG"
+      },
+      "Orange___Haunglongbing_(Citrus_greening)": {
+        description: "Haunglongbing, also known as citrus greening, is a devastating disease causing yellowing leaves and bitter, misshapen fruit.",
+        image: "static/images_path/Orange___Haunglongbing_(Citrus_greening).JPG"
+      },
+      "Peach___Bacterial_spot": {
+        description: "Bacterial spot on peach causes small, dark lesions on leaves and fruit, reducing quality and yield.",
+        image: "static/images_path/Peach___Bacterial_spot.JPG"
+      },
+      "Peach___healthy": {
+        description: "The peach plant is healthy with no visible disease symptoms.",
+        image: "static/images_path/Peach___healthy.JPG"
+      },
+      "Pepper,_bell___Bacterial_spot": {
+        description: "Bacterial spot in bell peppers results in dark, water-soaked lesions on foliage and fruit.",
+        image: "static/images_path/Pepper,_bell___Bacterial_spot.JPG"
+      },
+      "Pepper,_bell___healthy": {
+        description: "The bell pepper plant appears healthy with no disease.",
+        image: "static/images_path/Pepper,_bell___healthy.JPG"
+      },
+      "Potato___Early_blight": {
+        description: "Early blight in potatoes causes brown lesions with concentric rings on the leaves and stems.",
+        image: "static/images_path/Potato___Early_blight.JPG"
+      },
+      "Potato___Late_blight": {
+        description: "Late blight is a destructive disease in potatoes, characterized by dark, water-soaked lesions on leaves and tubers.",
+        image: "static/images_path/Potato_Late_Blight.JPG"
+      },
+      "Potato___healthy": {
+        description: "The potato plant is healthy without any symptoms of disease.",
+        image: "static/images_path/Potato___healthy.JPG"
+      },
+      "Soybean___healthy": {
+        description: "The soybean plant appears healthy with no disease symptoms.",
+        image: "static/images_path/Soybean___healthy.JPG"
+      },
+      "Strawberry___Leaf_scorch": {
+        description: "Leaf scorch in strawberries causes browning along the leaf edges and can lead to reduced vigor.",
+        image: "static/images_path/Strawberry___Leaf_scorch.JPG"
+      },
+      "Strawberry___healthy": {
+        description: "The strawberry plant is healthy and free of disease.",
+        image: "static/images_path/Strawberry___healthy.JPG"
+      },
+      "Tomato___Bacterial_spot": {
+        description: "Bacterial spot on tomato causes dark, water-soaked lesions on leaves and fruit.",
+        image: "static/images_path/Tomato___Bacterial_spot.JPG"
+      },
+      "Tomato___Early_blight": {
+        description: "Early blight in tomatoes presents as small, dark spots on leaves that can coalesce into larger necrotic areas.",
+        image: "static/images_path/Tomato___Early_blight.JPG"
+      },
+      "Tomato___Late_blight": {
+        description: "Late blight is a serious disease in tomatoes, with large, water-soaked lesions on leaves and fruit, often causing rapid decay.",
+        image: "static/images_path/tomato_late_blight.jpeg"
+      },
+      "Tomato___Leaf_Mold": {
+        description: "Leaf mold on tomato leaves is characterized by yellowing and moldy spots on the underside of leaves.",
+        image: "static/images_path/Tomato___Leaf_Mold.JPG"
+      },
+      "Tomato___Septoria_leaf_spot": {
+        description: "Septoria leaf spot in tomatoes appears as small, round spots with dark borders on the leaves.",
+        image: "static/images_path/Tomato___Septoria_leaf_spot.JPG"
+      },
+      "Tomato___Spider_mites_Two-spotted_spider_mite": {
+        description: "Infestation by two-spotted spider mites causes stippling, discoloration, and eventual leaf drop in tomatoes.",
+        image: "static/images_path/Tomato___Spider_mites Two-spotted_spider_mite.JPG"
+      },
+      "Tomato___Target_Spot": {
+        description: "Target spot on tomatoes is marked by circular, target-like lesions on leaves that can reduce plant vigor.",
+        image: "static/images_path/Tomato___Target_Spot.JPG"
+      },
+      "Tomato___Tomato_Yellow_Leaf_Curl_Virus": {
+        description: "Tomato Yellow Leaf Curl Virus causes yellowing, curling, and stunting of tomato plants, often leading to significant yield loss.",
+        image: "static/images_path/Tomato___Tomato_Yellow_Leaf_Curl_Virus.JPG"
+      },
+      "Tomato___Tomato_mosaic_virus": {
+        description: "Tomato mosaic virus results in mottled, discolored leaves and can severely impact fruit quality and yield.",
+        image: "static/images_path/Tomato___Tomato_mosaic_virus.JPG"
+      },
+      "Tomato___healthy": {
+        description: "The tomato plant appears healthy with no signs of disease.",
+        image: "static/images_path/Tomato___healthy.JPG"
+      }
+    };
+  </script>
+</head>
+<body>
+  <div class="container">
+    <div class="page-header">
+      <h1>
+        <i class="fas fa-leaf me-2" style="color: var(--secondary-color);"></i>
+        Disease Analysis Report
+      </h1>
+    </div>
+    <div class="location-info text-center my-4">
+      <h4>
+        <i class="fas fa-map-marker-alt"></i>
+        Detected Location
+      </h4>
+      <p id="location" class="lead"></p>
+    </div>
+
+    
+    <div class="back-home mb-4">
+      <a href="/"><i class="fas fa-home me-2"></i>Back to Home</a>
+    </div>
+
+    <div id="diseaseContainer" class="row g-4">
+      <!-- Disease cards will be inserted here -->
+    </div>
+  </div>
+
+  <script>
+    // Retrieve predicted diseases from localStorage
+    const predictions = JSON.parse(localStorage.getItem("diseasePredictions")) || [];
+    const diseaseContainer = document.getElementById("diseaseContainer");
+    const locationValue = localStorage.getItem("location") || "Location not available";
+    document.getElementById("location").innerText = locationValue;
+
+    
+    setTimeout(() => {
+    const diseaseContainer = document.getElementById("diseaseContainer");
+    if (diseaseContainer) {
+      diseaseContainer.scrollIntoView({ behavior: "smooth" });
+    }
+  }, 3000);
+
+
+
+    if (predictions.length === 0) {
+      diseaseContainer.innerHTML = `
+        <div class="col-12">
+          <div class="no-predictions animate-in">
+            <i class="fas fa-info-circle me-2"></i>
+            No disease predictions available.
+          </div>
+        </div>
+      `;
+    } else {
+        predictions.forEach((disease, index) => {
+    const rawName = disease.name || "unknown_disease";
+    const info = diseaseDetails[rawName] || {
+      description: "No description available.",
+      image: "static/images_path/default.jpg"
+    };
+
+    const card = document.createElement("div");
+    card.className = "col-md-6 col-lg-4 animate-in";
+    card.style.animationDelay = `${index * 0.1}s`;
+
+    card.innerHTML = `
+      <div class="disease-card">
+        <img src="${info.image}" alt="${rawName}" />
+        <div class="disease-content">
+          <div class="disease-title">${rawName.replace(/_/g, ' ')}</div>
+          <div class="disease-description">${info.description}</div>
+          <div class="disease-recommendation">
+            <strong>Recommendation:</strong>
+            ${disease.recommendation || "No specific recommendation available. Please consult with an agricultural expert."}
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Force browser reflow to trigger animation
+    requestAnimationFrame(() => {
+      diseaseContainer.appendChild(card);
+    });
+});
+    }
+  </script>
+</body>
+</html>

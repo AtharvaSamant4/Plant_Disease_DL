@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - PlantGuard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2C5F2D;
+            --secondary-color: #4B8B3D;
+            --accent-color: #FFA500;
+            --success-color: #228B22;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #f8fff0 0%, #ffffff 100%);
+            min-height: 100vh;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .section {
+            padding: 4rem 0;
+        }
+
+        .step {
+            border-left: 4px solid var(--primary-color);
+            padding: 2rem;
+            margin: 2rem 0;
+            background: rgba(255,255,255,0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .step-icon {
+            width: 70px;
+            height: 70px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8rem;
+            position: absolute;
+            left: -35px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .step p {
+    font-size: 18px; /* Adjust as needed */
+}
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: var(--primary-color);">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-leaf me-2"></i>PlantGuard
+            </a>
+            <a href="/upload" class="btn btn-outline-light">Try Now</a>
+        </div>
+    </nav>
+
+    <!-- About Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">How PlantGuard Works</h2>
+
+            <!-- Step 1 -->
+            <div class="step position-relative">
+                <div class="step-icon"><i class="fas fa-upload"></i></div>
+                <h3>1. Image Upload</h3>
+                <p>The user uploads an image of a plant leaf. The system first detects if the image contains a leaf before proceeding.</p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step position-relative">
+                <div class="step-icon"><i class="fas fa-seedling"></i></div>
+                <h3>2. Plant Type Detection</h3>
+                <p>The model predicts the plant type. If confidence is high (≥90%), it proceeds. Otherwise, the user selects from top predictions.</p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step position-relative">
+                <div class="step-icon"><i class="fas fa-cloud-sun"></i></div>
+                <h3>3. Weather Data Fetching</h3>
+                <p>Live location is used to fetch weather data (temperature, humidity, rainfall) via the OpenWeatherMap API.</p>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step position-relative">
+                <div class="step-icon"><i class="fas fa-disease"></i></div>
+                <h3>4. Disease Detection</h3>
+                <p>The image and weather data are passed to the disease detection model to predict potential plant diseases.</p>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="step position-relative">
+                <div class="step-icon"><i class="fas fa-lightbulb"></i></div>
+                <h3>5. AI-Powered Recommendations</h3>
+                <p>For detected diseases, the system fetches live treatment recommendations using the Gemini API.</p>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/upload" class="btn btn-lg btn-success">Start Diagnosis</a>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

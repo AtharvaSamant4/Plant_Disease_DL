@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlantGuard Diagnosis System</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary-color: #2c5f2d;
+      --secondary-color: #97bc62;
+      --accent-color: #F6F6F6;
+      --btn-color: #32a852;
+      --gradient-start: #8cbf26;
+      --gradient-end: #3a753a;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      font-family: 'Poppins', sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: absolute;
+      width: 200%;
+      height: 200%;
+      background-image: radial-gradient(var(--primary-color) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.1;
+      transform: rotate(45deg);
+      z-index: 0;
+    }
+
+    .upload-container {
+      max-width: 600px;
+      width: 90%;
+      padding: 2.5rem;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+      backdrop-filter: blur(10px);
+      position: relative;
+      z-index: 1;
+      transition: transform 0.3s ease;
+      border: 2px solid var(--primary-color);
+    }
+
+    .upload-container:hover {
+      transform: translateY(-5px);
+    }
+
+    .upload-container h2 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-bottom: 1.5rem;
+      text-align: center;
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+
+    .upload-container h2::after {
+      content: '🌱';
+      position: absolute;
+      right: -10px;
+      top: -15px;
+      font-size: 2rem;
+      transform: rotate(25deg);
+    }
+
+    .form-control {
+      border-radius: 12px !important;
+      padding: 1rem 1.5rem !important;
+      border: 2px solid var(--primary-color) !important;
+      transition: all 0.3s ease !important;
+    }
+
+    .form-control:focus {
+      box-shadow: 0 0 0 3px rgba(44, 95, 45, 0.25) !important;
+      border-color: var(--secondary-color) !important;
+    }
+
+    .img-preview {
+      width: 100%;
+      max-height: 350px;
+      object-fit: cover;
+      border-radius: 15px;
+      margin-top: 1.5rem;
+      display: none;
+      border: 3px solid var(--primary-color);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+
+    #resultsSection {
+      position: relative;
+      z-index: 2;
+      margin-top: 1.5rem;
+    }
+
+    .beautiful-error {
+      color: #dc3545;
+      background: rgba(220, 53, 69, 0.1);
+      border: 2px solid #dc3545;
+      padding: 1.5rem;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      animation: errorShake 0.4s ease;
+      backdrop-filter: blur(5px);
+    }
+
+    @keyframes errorShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+
+    .beautiful-selection-container {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid var(--primary-color);
+      border-radius: 15px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      backdrop-filter: blur(8px);
+    }
+
+    .beautiful-selection-container h5 {
+      font-size: 1.4rem;
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .beautiful-option {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid var(--primary-color);
+      border-radius: 10px;
+      padding: 1rem;
+      margin: 0.75rem 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .beautiful-option:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      background: var(--accent-color);
+      border-color: var(--secondary-color);
+    }
+
+    .beautiful-option::before {
+      content: '🌿';
+      font-size: 1.2rem;
+    }
+
+    .beautiful-option.text-danger {
+      border-color: #dc3545;
+      color: #dc3545;
+    }
+
+    .beautiful-option.text-danger::before {
+      content: '⚠️';
+    }
+
+    .beautiful-button {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border: none;
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .beautiful-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(44, 95, 45, 0.3);
+    }
+
+    .beautiful-button::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, 
+        transparent 25%, 
+        rgba(255,255,255,0.1) 50%, 
+        transparent 75%);
+      animation: buttonShine 3s infinite linear;
+    }
+     /* Add these new styles */
+     .img-preview {
+        transition: all 0.5s ease-in-out;
+    }
+    
+    .img-hidden {
+        opacity: 0 !important;
+        transform: translateY(-20px) !important;
+        height: 0 !important;
+        margin: 0 !important;
+        display: none !important;
+    }
+
+    .options-enter {
+        animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+     /* Add these new styles */
+     .processing-container {
+        position: relative;
+        padding: 2rem;
+        background: rgba(255,255,255,0.9);
+        border-radius: 15px;
+        margin: 2rem 0;
+    }
+
+    .modern-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid var(--primary-color);
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        position: relative;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .processing-text {
+        font-size: 1.2rem;
+        margin-top: 1rem;
+        color: var(--primary-color);
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.05); }
+    }
+
+    .floating-leaves {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+    }
+
+    .leaf {
+        position: absolute;
+        font-size: 1.5rem;
+        animation: float 3s ease-in-out infinite;
+        opacity: 5;
+    }
+    .leaf-analysis-container {
+        position: relative;
+        padding: 2rem;
+    }
+
+    .organic-spinner {
+        width: 60px;
+        height: 60px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        position: relative;
+        animation: grow 1.5s ease-in-out infinite;
+    }
+
+    @keyframes grow {
+        0%, 100% { transform: scale(0.8); }
+        50% { transform: scale(1.1); }
+    }
+
+    .organic-spinner::before {
+        content: '🌱';
+        position: absolute;
+        font-size: 2rem;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: leafPulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes leafPulse {
+        0%, 100% { transform: translate(-50%, -50%) scale(1); }
+        50% { transform: translate(-50%, -50%) scale(1.2); }
+    }
+
+    .scanning-beam {
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, var(--secondary-color), transparent);
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        animation: scan 2s ease-in-out infinite;
+    }
+
+    @keyframes scan {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .analysis-text {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+    }
+
+    .analysis-text::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background: var(--primary-color);
+        bottom: -5px;
+        left: 0;
+        transform: scaleX(0);
+        transform-origin: left;
+        animation: textUnderline 2s infinite;
+    }
+
+    @keyframes textUnderline {
+        0% { transform: scaleX(0); }
+        50% { transform: scaleX(1); }
+        100% { transform: scaleX(0); }
+    }
+
+    .floating-leaves span {
+        position: absolute;
+        font-size: 1.5rem;
+        opacity: 0;
+        animation: leafFloat 3s infinite linear;
+    }
+
+    @keyframes leafFloat {
+        0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+        20% { opacity: 0.4; }
+        100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(15deg); }
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes buttonShine {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .typewriter-message {
+      font-size: 1.8rem;
+      color: var(--primary-color);
+      text-align: center;
+      margin: 2rem 0;
+      position: relative;
+      background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-weight: 700;
+    }
+
+    .spinner-border {
+      width: 1.5rem;
+      height: 1.5rem;
+      border-width: 0.2em;
+    }
+
+    @media (max-width: 576px) {
+      .upload-container {
+        padding: 1.5rem;
+        border-radius: 15px;
+      }
+      
+      .upload-container h2 {
+        font-size: 2rem;
+      }
+    }
+    /* Modified :root variables */
+:root {
+  --primary-color: #2c5f2d;
+  --secondary-color: #97bc62;
+  --accent-color: #F6F6F6;
+  --btn-color: #32a852;
+  --gradient-start: #d4e6a5;
+  --gradient-end: #9bb982;
+}
+
+/* Modified background styles */
+body {
+  background: linear-gradient(160deg, var(--gradient-start), var(--gradient-end));
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 10% 20%, rgba(155, 185, 130, 0.1) 20%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(212, 230, 165, 0.1) 20%, transparent 40%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255,255,255,0.05) 0px,
+      rgba(255,255,255,0.05) 2px,
+      transparent 2px,
+      transparent 4px
+    );
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='52' height='26' viewBox='0 0 52 26' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%232c5f2d' fill-opacity='0.05'%3E%3Cpath d='M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z' /%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.15;
+  z-index: 0;
+}
+
+/* Add floating leaf particles */
+.leaf-particle {
+  position: fixed;
+  width: 25px;
+  height: 25px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  z-index: 0;
+  animation: float 15s infinite linear;
+  opacity: 0.3;
+}
+
+@keyframes float {
+  0% { transform: translateY(100vh) rotate(0deg); }
+  100% { transform: translateY(-100vh) rotate(360deg); }
+}
+
+/* Add these at the end of the style section */
+.leaf-particle:nth-child(1) { 
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232c5f2d"><path d="M17 8C8 10 2 16 2 22c3 3 6 2 8 1 3-2 6-5 7-9 2-6-3-8-5-9 0 0-1-2-3-1 0 0-3 0-4 3 0 0 1 4 4 2 2-1 4-3 4-3 0 2-2 4-5 5z"/></svg>');
+  left: 10%;
+  animation-delay: 0s;
+  animation-duration: 18s;
+}
+
+.leaf-particle:nth-child(2) {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2397bc62"><path d="M12 2c3 3 5 10 5 14 0 4-3 6-5 6s-5-2-5-6c0-4 2-11 5-14z"/></svg>');
+  left: 30%;
+  animation-delay: 3s;
+  animation-duration: 15s;
+}
+
+.leaf-particle:nth-child(3) {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232c5f2d"><path d="M19 12c0 4-3 7-7 7s-7-3-7-7c0-3 1-6 3-8 2 2 5 3 8 3s6-1 8-3c2 2 3 5 3 8z"/></svg>');
+  left: 70%;
+  animation-delay: 7s;
+  animation-duration: 17s;
+}
+
+.leaf-particle:nth-child(4) {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2397bc62"><path d="M12 2c2 3 3 7 3 11s-1 8-3 11c-2-3-3-7-3-11S10 5 12 2z"/></svg>');
+  left: 85%;
+  animation-delay: 12s;
+  animation-duration: 14s;
+}
+  </style>
+</head>
+<body>
+  <div class="leaf-particle"></div>
+<div class="leaf-particle"></div>
+<div class="leaf-particle"></div>
+<div class="leaf-particle"></div>
+  <!-- Keep all original HTML structure -->
+  <div class="upload-container">
+    <h2 class="text-center mb-4">PlantGuard Diagnosis</h2>
+    <form id="uploadForm">
+      <div class="mb-3">
+        <input type="file" class="form-control" id="imageInput" accept="image/*" />
+        <img id="previewImg" class="img-preview mt-3" />
+      </div>
+      <button type="submit" class="btn beautiful-button w-100">
+        <span class="spinner-border spinner-border-sm d-none" id="spinner"></span>
+        Start Diagnosis
+      </button>
+    </form>
+    <div id="resultsSection"></div>
+  </div>
+
+  <!-- Keep all original JavaScript -->
+  <script>
+    // Original JavaScript remains completely unchanged
+    let currentFilename = '';
+     // Displays an error message with a typewriter effect.
+     function showError(message) {
+      const resultsSection = document.getElementById('resultsSection');
+      resultsSection.innerHTML = '';
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'beautiful-error';
+      resultsSection.appendChild(errorDiv);
+      let index = 0;
+      function typeWriter() {
+        if (index < message.length) {
+          errorDiv.innerHTML += message.charAt(index);
+          index++;
+          setTimeout(typeWriter, 50);
+        }
+      }
+      typeWriter();
+    }
+
+    // Gets the geolocation (used by the second model).
+    async function getLocation() {
+      return new Promise((resolve, reject) => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            position => resolve({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            }),
+            error => reject("Please enable location services")
+          );
+        } else {
+          reject("Geolocation is not supported by this browser.");
+        }
+      });
+    }
+
+    // If multiple predictions are detected, the user picks which plant,
+    // then we call /confirm_plant to see if there's a disease, etc.
+    async function handlePlantSelection(plantType) {
+      const resultsSection = document.getElementById('resultsSection');
+      if (plantType === 'not_listed') {
+        
+        resultsSection.innerHTML = `
+          <div class="beautiful-error">
+            Plant is not in our database.
+          </div>
+        `;
+        document.querySelector('.upload-container').scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+        
+        return;
+      }
+    //   window.scrollTo({ top: 0, behavior: "smooth" });
+      resultsSection.innerHTML = `
+        <div class="leaf-analysis-container">
+            <div class="text-center position-relative">
+                <!-- Floating leaves background -->
+                <div class="floating-leaves">
+                    <span style="left:10%; animation-delay:0s">🍃</span>
+                    <span style="left:30%; animation-delay:0.5s">🌿</span>
+                    <span style="left:50%; animation-delay:1s">🍂</span>
+                    <span style="left:70%; animation-delay:1.5s">🌱</span>
+                    <span style="left:90%; animation-delay:2s">🍃</span>
+                </div>
+                
+                <!-- Animated plant spinner -->
+                <div class="organic-spinner mb-3"></div>
+                
+                <!-- Animated text -->
+                <h4 class="analysis-text text-primary mt-3">
+                    Analyzing Leaf Structure
+                </h4>
+                
+                <!-- Scanning beam effect -->
+                <div class="scanning-beam"></div>
+            </div>
+        </div>
+    `;
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      try {
+        await new Promise(r => setTimeout(r, 3500));
+        resultsSection.innerHTML = `
+            <div class="leaf-analysis-container">
+                <div class="text-center position-relative">
+                    <!-- Floating leaves background -->
+                    <div class="floating-leaves">
+                        <span style="left:10%; animation-delay:0s">🍃</span>
+                        <span style="left:30%; animation-delay:0.5s">🌿</span>
+                        <span style="left:50%; animation-delay:1s">🍂</span>
+                        <span style="left:70%; animation-delay:1.5s">🌱</span>
+                        <span style="left:90%; animation-delay:2s">🍃</span>
+                    </div>
+                    
+                    <!-- Animated plant spinner -->
+                    <div class="organic-spinner mb-3"></div>
+                    
+                    <!-- Animated text -->
+                    <h4 class="analysis-text text-primary mt-3">
+                        Fetching Live Weather Data...
+                    </h4>
+                    
+                    <!-- Scanning beam effect -->
+                    <div class="scanning-beam"></div>
+                </div>
+            </div>
+        `;
+        const startTime = Date.now();
+        const location = await getLocation();
+        const response = await fetch('/confirm_plant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plant: plantType,
+            filename: currentFilename,
+            latitude: location.latitude,
+            longitude: location.longitude
+          })
+        });
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 3000) {
+          await new Promise(r => setTimeout(r, 3000 - elapsed));
+        }
+        const data = await response.json();
+        if (data.status === 'unknown_plant') {
+          showError(data.message);
+          return;
+        }
+        if (data.status === 'success' || data.status === 'disease_detection') {
+  // Save disease predictions in localStorage for the results page.
+  localStorage.setItem("diseasePredictions", JSON.stringify(data.diseases));
+  
+  // Also save the plant type if needed.
+  localStorage.setItem("plant", data.plant);
+  localStorage.setItem("location", data.location);
+  // Get the user's location
+  window.location.href = "results.html";
+
+    
+  } 
+
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+
+    // Show image preview when a file is selected.
+    document.getElementById('imageInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const previewImg = document.getElementById('previewImg');
+        if (file) {
+            // Reset image visibility when new file is selected
+            previewImg.classList.remove('img-hidden');
+            previewImg.style.display = 'block';
+            previewImg.src = URL.createObjectURL(file);
+            currentFilename = file.name;
+        }
+    });
+
+    // The main form submission: first we call /analyze to detect the leaf.
+    // If there's only one strong match, we proceed. Otherwise, we display multiple options.
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById('imageInput');
+      const resultsSection = document.getElementById('resultsSection');
+      
+      if (!fileInput.files.length) {
+        showError("Please select an image first!");
+        return;
+      }
+      resultsSection.innerHTML = `
+        <div class="processing-container">
+            <div class="floating-leaves">
+                <div class="leaf" style="left: 10%; animation-delay: 0s">🍃</div>
+                <div class="leaf" style="left: 30%; animation-delay: 0.5s">🌱</div>
+                <div class="leaf" style="left: 50%; animation-delay: 1s">🍂</div>
+                <div class="leaf" style="left: 70%; animation-delay: 1.5s">🌿</div>
+                <div class="leaf" style="left: 90%; animation-delay: 2s">🍃</div>
+            </div>
+            <div class="text-center">
+                <div class="modern-spinner"></div>
+                <h4 class="processing-text mt-3">Analyzing Plant Type</h4>
+            </div>
+        </div>
+      `;
+      
+    //   Smooth scroll to processing message
+      resultsSection.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center' // This will center the message in the viewport
+      });
+
+   
+
+      try {
+        const startTime = Date.now();
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          body: formData
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Server error");
+        }
+        const data = await response.json();
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 3000) {
+          await new Promise(r => setTimeout(r, 3000 - elapsed));
+        }
+        if (data.status === 'direct_success') {
+          await handlePlantSelection(data.predictions[0].class);
+        } else {
+          const confirmationHtml = `
+            <div id="fadeOptions" class="beautiful-selection-container">
+              <h5>Please Confirm Plant Type</h5>
+              <p>Top Confidence: ${(data.top_confidence * 100).toFixed(1)}%</p>
+              ${data.predictions.map(p => `
+                <div class="beautiful-option" onclick="handlePlantSelection('${p.class}')">
+                  ${p.class} (${(p.confidence * 100).toFixed(1)}%)
+                </div>
+              `).join('')}
+              <div class="beautiful-option text-danger mt-2" onclick="handlePlantSelection('not_listed')">
+                Plant isn't listed
+              </div>
+            </div>
+          `;
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          displayConfirmationPrompt(confirmationHtml);
+        }
+      } catch (error) {
+        showError(error.message);
+      }
+    });
+
+    // Clears the screen, then displays "MORE THAN ONE TYPE DETECTED" with a typewriter effect.
+    // After that message is complete, it stays at the top, and the confirmation options fade in below.
+    // Once fade-in is complete, scroll the options into view.
+    function displayConfirmationPrompt(confirmationHtml) {
+        const resultsSection = document.getElementById('resultsSection');
+        const previewImg = document.getElementById('previewImg');
+        
+        // Hide image with animation
+        previewImg.classList.add('img-hidden');
+        
+        resultsSection.innerHTML = "";
+        const headerDiv = document.createElement("div");
+        headerDiv.className = "typewriter-message";
+        resultsSection.appendChild(headerDiv);
+        
+        const messageText = "MULTIPLE PLANT TYPES DETECTED";
+        let index = 0;
+        
+        function typeWriter() {
+            if (index < messageText.length) {
+                headerDiv.innerHTML += messageText.charAt(index);
+                index++;
+                setTimeout(typeWriter, 100);
+            } else {
+                const optionsDiv = document.createElement("div");
+                optionsDiv.innerHTML = confirmationHtml;
+                optionsDiv.style.opacity = 0;
+                optionsDiv.classList.add('options-enter');
+                resultsSection.appendChild(optionsDiv);
+                
+                // Smooth fade-in
+                let opacity = 0;
+                const interval = setInterval(() => {
+                    opacity += 0.05;
+                    optionsDiv.style.opacity = opacity;
+                    if (opacity >= 1) {
+                        clearInterval(interval);
+                        optionsDiv.style.transform = "translateY(0)";
+                        optionsDiv.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                }, 50);
+            }
+        }
+        typeWriter();
+    }
+  </script>
+</body>
+</html>

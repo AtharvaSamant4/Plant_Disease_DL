@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PlantGuard - Protect Your Plant With AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        
+        :root {
+            --process-blue: #2C5F2D;
+            --analysis-green: #4B8B3D;
+            --warning-orange: #FFA500;
+            --success-green: #228B22;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #f8fff0 0%, #ffffff 100%);
+            min-height: 100vh;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .workflow-section {
+            padding: 4rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .process-step {
+            border-left: 4px solid var(--process-blue);
+            padding: 2rem;
+            margin: 2rem 0;
+            position: relative;
+            background: rgba(255,255,255,0.95);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transform: translateX(-50px);
+            opacity: 0;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .process-step.visible {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .process-step:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+        }
+
+        .step-icon {
+            width: 70px;
+            height: 70px;
+            background: var(--process-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.8rem;
+            position: absolute;
+            left: -35px;
+            top: 50%;
+            transform: translateY(-50%);
+            box-shadow: 0 5px 15px rgba(44,95,45,0.3);
+        }
+
+        .confidence-visual {
+            width: 100%;
+            height: 15px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            position: relative;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            width: 90%;
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50 0%, #FF5722 100%);
+            position: absolute;
+            left: -100%;
+            transition: left 1.5s ease-out;
+        }
+
+        .threshold-marker {
+            position: absolute;
+            right: 10%;
+            top: -25px;
+            color: var(--warning-orange);
+            font-weight: 700;
+            font-size: 1.1rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease 0.3s;
+        }
+
+        .tech-pill {
+            background: rgba(44,95,45,0.1);
+            color: var(--process-blue);
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            margin: 0.5rem;
+            display: inline-block;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(44,95,45,0.15);
+        }
+
+        .tech-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(44,95,45,0.15);
+        }
+
+        @keyframes pathAnim {
+            0% { stroke-dashoffset: 1000; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        .animated-svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .animated-svg path {
+            stroke: rgba(44,95,45,0.08);
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: pathAnim 20s linear infinite;
+        }
+
+        .section-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: var(--process-blue);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 3rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 60%;
+            height: 4px;
+            background: var(--analysis-green);
+            border-radius: 2px;
+        }
+       
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: rgba(44,95,45,0.95);">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-leaf me-2"></i>PlantGuard
+            </a>
+            <div class="d-flex">
+                <a href="/about" class="btn btn-outline-light me-2">About</a>
+                <a href="/upload" class="btn btn-outline-light">Try Now <i class="fas fa-arrow-right ms-2"></i></a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Workflow Section -->
+    <section class="workflow-section">
+        <div class="animated-svg">
+            <svg viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0,128L48,112C96,96,192,64,288,53.3C384,43,480,53,576,85.3C672,117,768,171,864,170.7C960,171,1056,117,1152,106.7C1248,96,1344,128,1392,144L1440,160L1440,0L1392,0C1344,0,1248,0,1152,0C1056,0,960,0,864,0C768,0,672,0,576,0C480,0,384,0,288,0C192,0,96,0,48,0L0,0Z"></path>
+            </svg>
+        </div>
+        
+        <div class="container">
+            <h2 class="section-title text-center">AI-Powered Plant Diagnosis</h2>
+
+            <!-- Step 1 -->
+            <div class="process-step">
+                <div class="step-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <h3 class="mb-3">1. Image Analysis</h3>
+                <div class="tech-pill">Convolutional Neural Network</div>
+                <div class="tech-pill">Image Preprocessing Pipeline</div>
+                <p class="mt-3 text-muted" style="font-size: 18px;">
+                    Our deep learning model analyzes leaf images trained on a dataset of over 10000+ plant images across 11 species.
+                </p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="process-step">
+                <div class="step-icon"><i class="fas fa-brain"></i></div>
+                <h3 class="mb-3">2. Confidence Threshold Verification</h3>
+                <div class="confidence-visual">
+                    <div class="confidence-fill"></div>
+                    <span class="threshold-marker">90% Confidence Threshold</span>
+                </div>
+                <div class="row mt-3 g-3">
+                    <div class="col-md-6">
+                        <div class="alert alert-success h-100">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>High Confidence (>90%)</strong><br>
+                            Proceed to automated disease analysis
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-warning h-100">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Low Confidence (<90%)</strong><br>
+                            Requires manual plant verification
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="process-step">
+                <div class="step-icon"><i class="fas fa-cloud-sun"></i></div>
+                <h3 class="mb-3">3. Real-Time Weather Integration</h3>
+                <div class="tech-pill">OpenWeatherMap API</div>
+                <div class="tech-pill">Geolocation Services</div>
+                <div class="row mt-4 g-4">
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <i class="fas fa-thermometer-half fs-1 text-primary"></i>
+                                <h5 class="my-2">Temperature Analysis</h5>
+                                <p class="text-muted mb-0">Optimal treatment recommendations based on current temperature</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <i class="fas fa-tint fs-1 text-info"></i>
+                                <h5 class="my-2">Humidity Monitoring</h5>
+                                <p class="text-muted mb-0">Adjust suggestions for fungal risk levels</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <i class="fas fa-cloud-rain fs-1 text-success"></i>
+                                <h5 class="my-2">Rainfall Prediction</h5>
+                                <p class="text-muted mb-0">Modify treatment schedules accordingly</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="process-step">
+                <div class="step-icon"><i class="fas fa-diagnoses"></i></div>
+                <h3 class="mb-3">4. Multi-Model Disease Detection</h3>
+                <div class="tech-pill">Transfer Learning</div>
+                
+                <div class="row mt-4 g-4">
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="mb-3"><i class="fas fa-bug me-2"></i>Disease Detection</h5>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item">34 Unique Diseases</li>
+                                    <li class="list-group-item">11 Plant Species</li>
+                                   
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTA -->
+            <div class="text-center mt-5 pt-4">
+                <a href="/upload" class="btn btn-lg btn-success px-5 py-3 rounded-pill">
+                    Start Diagnosis <i class="fas fa-chevron-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Animation trigger on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    if(entry.target.querySelector('.confidence-fill')) {
+                        entry.target.querySelector('.confidence-fill').style.left = '0';
+                        entry.target.querySelector('.threshold-marker').style.opacity = '1';
+                        entry.target.querySelector('.threshold-marker').style.transform = 'translateY(0)';
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.process-step').forEach((element) => {
+            observer.observe(element);
+        });
+
+        // Hover effect enhancement
+        document.querySelectorAll('.process-step').forEach(step => {
+            step.addEventListener('mouseenter', () => {
+                step.style.transform = 'translateY(-5px) scale(1.02)';
+            });
+            
+            step.addEventListener('mouseleave', () => {
+                if(step.classList.contains('visible')) {
+                    step.style.transform = 'translateY(0) scale(1)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
