@@ -9,7 +9,20 @@ import requests
 import json
 import re
 from opencage.geocoder import OpenCageGeocode
+import gdown
 
+MODEL_URLS = {
+    "plant_vs_non_plant_model.h5": "https://drive.google.com/uc?id=18QcLMrAZq2Lbh3hlWEqXejL9cbS3kmXT",
+    "Plant_Classification_Architecture(Apple,Banana,etc).keras": "https://drive.google.com/uc?id=18tTN-huf5HvnJTRx7EitRKXheyyTeEwU
+",
+    "Plant_Disease_Predictor_with_Weather.keras": "https://drive.google.com/uc?id=1O_Ire7-TFwZ0QUj4ej6Rp2OwnmDaXXI1
+"
+}
+
+for model_file, url in MODEL_URLS.items():
+    if not os.path.exists(model_file):
+        print(f"Downloading {model_file} from Google Drive...")
+        gdown.download(url, model_file, quiet=False)
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
