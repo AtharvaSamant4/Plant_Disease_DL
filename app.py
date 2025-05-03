@@ -160,27 +160,53 @@ def predict_disease(plant_type, img_path, weather_data):
         interpreter = load_model("disease")
         input_details = interpreter.get_input_details()
         output_details = interpreter.get_output_details()
-        
-        # Preprocess inputs
+
+        # Debug: Print expected input shapes
+        print("\n[DEBUG] Model Input Requirements:")
+        for i, inp in enumerate(input_details):
+            print(f"Input {i}: {inp['name']} - Shape: {inp['shape']}")
+
+        # Preprocess image
         img_array = preprocess_image_for_disease(img_path, (224, 224))
-        weather_array = np.array(weather_data).reshape(1, -1).astype(np.float32)
+        print(f"\n[DEBUG] Raw image array shape: {img_array.shape}")
+
+        # Reshape image to match model input
+        target_img_shape = tuple([dim if dim != -1 else 1 for dim in input_details[0]['shape']])
+        if img_array.shape != target_img_shape:
+            print(f"[DEBUG] Reshaping image from {img_array.shape} to {target_img_shape}")
+            img_array = img_array.reshape(target_img_shape)
         
-        # Set multi-input tensors
+        # Prepare weather data
+        weather_array = np.array(weather_data, dtype=np.float32)
+        print(f"[DEBUG] Raw weather array shape: {weather_array.shape}")
+        
+        # Reshape weather data to match model input
+        target_weather_shape = tuple([dim if dim != -1 else 1 for dim in input_details[1]['shape']])
+        if weather_array.shape != target_weather_shape:
+            print(f"[DEBUG] Reshaping weather from {weather_array.shape} to {target_weather_shape}")
+            weather_array = weather_array.reshape(target_weather_shape)
+
+        # Verify final shapes
+        print("\n[DEBUG] Final Input Shapes:")
+        print(f"Image: {img_array.shape} (dtype: {img_array.dtype})")
+        print(f"Weather: {weather_array.shape} (dtype: {weather_array.dtype})")
+
+        # Set tensors
         interpreter.set_tensor(input_details[0]['index'], img_array)
         interpreter.set_tensor(input_details[1]['index'], weather_array)
         interpreter.invoke()
-        
+
+        # Get predictions
         logits = interpreter.get_tensor(output_details[0]['index'])[0]
         
-        # Filter valid diseases for plant type
+        # Rest of your original processing logic
         disease_prefix = PLANT_TO_DISEASE_PREFIX.get(plant_type, '')
         valid_indices = [idx for idx, label in DISEASE_LABELS.items() 
                         if label.startswith(f"{disease_prefix}___")]
         
         if not valid_indices:
             return [('Unknown Disease', 1.0)], "high"
-            
-        # Process predictions
+
         valid_logits = logits[valid_indices]
         exp_logits = np.exp(valid_logits - np.max(valid_logits))
         probs = exp_logits / exp_logits.sum()
