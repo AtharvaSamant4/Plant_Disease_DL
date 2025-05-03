@@ -251,7 +251,7 @@ def about():
     return render_template('about.html')
 
 @app.route('/results')
-def about():
+def results():
     return render_template('results.html')
 @app.route('/upload')
 def upload():
