@@ -1,35 +1,78 @@
 import os
 import numpy as np
 import tensorflow as tf
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 from werkzeug.utils import secure_filename
 from tensorflow.keras.preprocessing import image
 from PIL import ImageOps
 import requests
 import re
+import cv2
 from opencage.geocoder import OpenCageGeocode
+from skimage.feature import graycomatrix, graycoprops
 
 # Configure TensorFlow for low memory usage
 tf.config.threading.set_intra_op_parallelism_threads(2)
 tf.config.threading.set_inter_op_parallelism_threads(2)
 tf.config.set_visible_devices([], 'GPU')  # Disable GPU
 
-# Model paths (using TFLite models from repo)
+# Model paths
 MODEL_PATHS = {
-    "leaf": "Plant_vs_Nonplant.tflite",
     "plant": "Plant_Classification_Model.tflite",
     "disease": "Plant_Disease_Predictor_with_Weather.tflite"
 }
 
 # Lazy-loaded models
 _MODELS = {
-    "leaf": None,
     "plant": None,
     "disease": None
 }
 
+class LeafDetector:
+    def __init__(self):
+        self.COLOR_THRESH = 0.25
+        self.CONTRAST_MAX = 450
+        self.AREA_RANGE = (500, 50000)
+        self.PERIMETER_RATIO = 0.25
+
+    def detect(self, img_path):
+        img = cv2.imread(img_path)
+        if img is None:
+            return False
+            
+        return (self._color_detection(img) + 
+                self._shape_detection(img) + 
+                self._texture_detection(img)) >= 2
+
+    def _color_detection(self, img):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        lower_green = np.array([25, 40, 40])
+        upper_green = np.array([85, 255, 255])
+        mask = cv2.inRange(hsv, lower_green, upper_green)
+        return cv2.countNonZero(mask) / (img.size/3) > self.COLOR_THRESH
+
+    def _shape_detection(self, img):
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (5,5), 0)
+        edges = cv2.Canny(blurred, 50, 150)
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        for cnt in contours:
+            area = cv2.contourArea(cnt)
+            if not self.AREA_RANGE[0] < area < self.AREA_RANGE[1]:
+                continue
+            perimeter = cv2.arcLength(cnt, True)
+            compactness = (perimeter**2) / (4 * np.pi * area)
+            if compactness < self.PERIMETER_RATIO:
+                return True
+        return False
+
+    def _texture_detection(self, img):
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        glcm = graycomatrix(gray, distances=[1], angles=[0], levels=256)
+        return graycoprops(glcm, 'contrast')[0,0] < self.CONTRAST_MAX
+
 def load_model(model_name):
-    """Lazy-load TFLite models"""
     if _MODELS[model_name] is None:
         interpreter = tf.lite.Interpreter(model_path=MODEL_PATHS[model_name])
         interpreter.allocate_tensors()
@@ -37,12 +80,12 @@ def load_model(model_name):
     return _MODELS[model_name]
 
 def clear_memory():
-    """Release model resources after each prediction"""
     for key in _MODELS:
         _MODELS[key] = None
     tf.keras.backend.clear_session()
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -52,6 +95,26 @@ TOP_K = 3
 HIGH_CONFIDENCE_THRESHOLD = 0.9
 PLANT_CLASS_NAMES = ['Apple', 'Cherry', 'Corn', 'Grape', 'Orange', 'Peach', 
                     'Pepper_bell', 'Potato', 'Soybean', 'Strawberry', 'Tomato']
+
+DISEASE_LABELS = {
+    0: 'Apple___Apple_scab', 1: 'Apple___Black_rot', 2: 'Apple___Cedar_apple_rust',
+    3: 'Apple___healthy', 4: 'Cherry_(including_sour)___Powdery_mildew',
+    5: 'Cherry_(including_sour)___healthy', 6: 'Corn_(maize)___Common_rust_',
+    7: 'Corn_(maize)___Northern_Leaf_Blight', 8: 'Corn_(maize)___healthy',
+    9: 'Grape___Black_rot', 10: 'Grape___Esca_(Black_Measles)',
+    11: 'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)', 12: 'Grape___healthy',
+    13: 'Orange___Haunglongbing_(Citrus_greening)', 14: 'Peach___Bacterial_spot',
+    15: 'Peach___healthy', 16: 'Pepper,_bell___Bacterial_spot',
+    17: 'Pepper,_bell___healthy', 18: 'Potato___Early_blight',
+    19: 'Potato___Late_blight', 20: 'Potato___healthy',
+    21: 'Soybean___healthy', 22: 'Strawberry___Leaf_scorch',
+    23: 'Strawberry___healthy', 24: 'Tomato___Bacterial_spot',
+    25: 'Tomato___Early_blight', 26: 'Tomato___Late_blight',
+    27: 'Tomato___Leaf_Mold', 28: 'Tomato___Septoria_leaf_spot',
+    29: 'Tomato___Spider_mites_Two-spotted_spider_mite', 30: 'Tomato___Target_Spot',
+    31: 'Tomato___Tomato_Yellow_Leaf_Curl_Virus', 32: 'Tomato___Tomato_mosaic_virus',
+    33: 'Tomato___healthy'
+}
 
 PLANT_TO_DISEASE_PREFIX = {
     'Apple': 'Apple',
@@ -66,62 +129,16 @@ PLANT_TO_DISEASE_PREFIX = {
     'Strawberry': 'Strawberry',
     'Tomato': 'Tomato'
 }
-
-DISEASE_LABELS = {
-    0: 'Apple___Apple_scab',
-    1: 'Apple___Black_rot',
-    2: 'Apple___Cedar_apple_rust',
-    3: 'Apple___healthy',
-    4: 'Cherry_(including_sour)___Powdery_mildew',
-    5: 'Cherry_(including_sour)___healthy',
-    6: 'Corn_(maize)___Common_rust_',
-    7: 'Corn_(maize)___Northern_Leaf_Blight',
-    8: 'Corn_(maize)___healthy',
-    9: 'Grape___Black_rot',
-    10: 'Grape___Esca_(Black_Measles)',
-    11: 'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)',
-    12: 'Grape___healthy',
-    13: 'Orange___Haunglongbing_(Citrus_greening)',
-    14: 'Peach___Bacterial_spot',
-    15: 'Peach___healthy',
-    16: 'Pepper,_bell___Bacterial_spot',
-    17: 'Pepper,_bell___healthy',
-    18: 'Potato___Early_blight',
-    19: 'Potato___Late_blight',
-    20: 'Potato___healthy',
-    21: 'Soybean___healthy',
-    22: 'Strawberry___Leaf_scorch',
-    23: 'Strawberry___healthy',
-    24: 'Tomato___Bacterial_spot',
-    25: 'Tomato___Early_blight',
-    26: 'Tomato___Late_blight',
-    27: 'Tomato___Leaf_Mold',
-    28: 'Tomato___Septoria_leaf_spot',
-    29: 'Tomato___Spider_mites_Two-spotted_spider_mite',
-    30: 'Tomato___Target_Spot',
-    31: 'Tomato___Tomato_Yellow_Leaf_Curl_Virus',
-    32: 'Tomato___Tomato_mosaic_virus',
-    33: 'Tomato___healthy'
-}
-
-# API Keys (Consider using environment variables in production)
 WEATHER_API_KEY = "1020a5b033aee42c4874144d88e5dade"
 GEMINI_API_KEY = "AIzaSyBqQDeTQ_RwTvrsjz8D9XtozGUWw2vZoIk"
 OPENCAGE_API_KEY = 'cb0e84b387ca439e973f121ae101cecc'
 
+leaf_detector = LeafDetector()
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
-
 def preprocess_image_for_plant(img_path, target_size):
-    img = image.load_img(img_path, target_size=target_size)
-    img_gray = ImageOps.grayscale(img)
-    img_array = np.array(img_gray)
-    img_array = np.stack([img_array] * 3, axis=-1)
-    return np.expand_dims(img_array, axis=0)
-
-def preprocess_image_for_plant2(img_path, target_size):
     img = image.load_img(
         img_path, 
         color_mode='rgb',
@@ -131,18 +148,12 @@ def preprocess_image_for_plant2(img_path, target_size):
     img_array = image.img_to_array(img)  # Values 0-255
     return np.expand_dims(img_array, axis=0)
 
-
-
-def preprocess_image_for_disease(img_path, target_size):
-    img = image.load_img(img_path, target_size=target_size)
-    img_array = image.img_to_array(img)
-    return np.expand_dims(img_array, axis=0) / 255.0
-
 def get_weather_data(latitude, longitude):
-    """Fetch weather data from OpenWeatherMap"""
-    url = f'http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={WEATHER_API_KEY}&units=metric'
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(
+            f'http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={WEATHER_API_KEY}&units=metric',
+            timeout=5
+        )
         if response.status_code == 200:
             data = response.json()
             return [
@@ -152,20 +163,13 @@ def get_weather_data(latitude, longitude):
             ]
     except Exception as e:
         print(f"Weather API error: {str(e)}")
-    return [25.0, 60.0, 0.0]  # Default values
+    return [25.0, 60.0, 0.0]
 
-def detect_leaf(image_path):
-    """Detect if image contains a plant leaf"""
-    interpreter = load_model("leaf")
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-    
-    img_array = preprocess_image_for_plant(image_path, (224, 224))
-    interpreter.set_tensor(input_details[0]['index'], img_array.astype(np.float32))
-    interpreter.invoke()
-    prediction = interpreter.get_tensor(output_details[0]['index'])
-    clear_memory()
-    return prediction[0][0]
+
+def preprocess_image_for_disease(img_path, target_size):
+    img = image.load_img(img_path, target_size=target_size)
+    img_array = image.img_to_array(img)
+    return np.expand_dims(img_array, axis=0) / 255.0
 
 def predict_disease(plant_type, img_path, weather_data):
     """Predict plant disease with weather context"""
@@ -235,23 +239,16 @@ def predict_disease(plant_type, img_path, weather_data):
         return [], "unknown"
 
 def get_gemini_recommendation(disease_name, weather_data):
-    """Get treatment recommendations from Gemini API"""
     if "healthy" in disease_name.lower():
         return "Plant is healthy. Maintain current care practices."
-    
-    temp, humidity, rainfall = weather_data
-    prompt = (f"Provide treatment for {disease_name} considering: "
-              f"{temp}°C temp, {humidity}% humidity, {rainfall}mm rain. "
-              "Give 4 concise bullet points without markdown.")
     
     try:
         response = requests.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
-            json= {"contents": [{"parts": [{"text": prompt}]}]},
+            json={"contents": [{"parts": [{"text": f"Provide treatment for {disease_name} considering: {weather_data[0]}°C temp, {weather_data[1]}% humidity"}]}]},
             headers={"Content-Type": "application/json"},
             timeout=10
         )
-        response.raise_for_status()
         text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
         return re.sub(r'\*\*(.*?)\*\*', r'\1', text).replace('•', '➜')
     except Exception as e:
@@ -259,17 +256,22 @@ def get_gemini_recommendation(disease_name, weather_data):
         return "Recommendation unavailable. Please consult an agricultural expert."
 
 def reverse_geocoding(latitude, longitude):
-    """Convert coordinates to readable location"""
     try:
         geocoder = OpenCageGeocode(OPENCAGE_API_KEY)
         results = geocoder.reverse_geocode(latitude, longitude)
-        return ", ".join([str(results[0]['components'].get(c, '') )
-                        for c in ["road", "city", "state", "country"]]) if results else "Location unavailable"
+        if results:
+            components = results[0]['components']
+            return ", ".join(filter(None, [
+                components.get("road"),
+                components.get("city"),
+                components.get("state"),
+                components.get("country")
+            ]))
+        return "Location unavailable"
     except Exception as e:
         print(f"Geocoding error: {str(e)}")
         return "Service unavailable"
 
-# Flask Routes
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -278,13 +280,13 @@ def home():
 def about():
     return render_template('about.html')
 
-@app.route('/results')
-def results():
-    return render_template('results.html')
-
 @app.route('/upload')
 def upload():
     return render_template('upload.html')
+
+@app.route('/results')
+def results():
+    return render_template('results.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -300,22 +302,18 @@ def analyze():
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(save_path)
 
-        # Leaf detection
-        if detect_leaf(save_path) > 0.5:
+        if not leaf_detector.detect(save_path):
             return jsonify({"status": "error", "message": "Please upload a clear plant leaf image"}), 400
 
-        # Plant classification
         interpreter = load_model("plant")
         input_details = interpreter.get_input_details()
-        output_details = interpreter.get_output_details()  # ADD THIS LINE
+        output_details = interpreter.get_output_details()
         
-        img_array = preprocess_image_for_plant2(save_path, (128, 128))
+        img_array = preprocess_image_for_plant(save_path, (128, 128))
         interpreter.set_tensor(input_details[0]['index'], img_array.astype(np.float32))
         interpreter.invoke()
         
-        # CORRECTED PREDICTION LINE
         predictions = interpreter.get_tensor(output_details[0]['index'])[0]
-        
         top_k_idx = np.argsort(predictions)[-TOP_K:][::-1]
         plant_preds = [(PLANT_CLASS_NAMES[i], float(predictions[i])) for i in top_k_idx]
         best_plant, best_conf = plant_preds[0]
@@ -336,6 +334,7 @@ def analyze():
     except Exception as e:
         clear_memory()
         return jsonify({"status": "error", "message": f"Analysis failed: {str(e)}"}), 500
+
 @app.route('/confirm_plant', methods=['POST'])
 def confirm_plant():
     try:
@@ -370,4 +369,4 @@ def confirm_plant():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=False)
