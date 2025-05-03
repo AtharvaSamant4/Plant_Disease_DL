@@ -241,11 +241,16 @@ def predict_disease(plant_type, img_path, weather_data):
 def get_gemini_recommendation(disease_name, weather_data):
     if "healthy" in disease_name.lower():
         return "Plant is healthy. Maintain current care practices."
+
+    temp, humidity, rainfall = weather_data
+    prompt = (f"Provide treatment for {disease_name} considering: "
+              f"{temp}°C temp, {humidity}% humidity, {rainfall}mm rain. "
+              "Give 4 concise bullet points without markdown.")
     
     try:
         response = requests.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
-            json={"contents": [{"parts": [{"text": f"Provide treatment for {disease_name} considering: {weather_data[0]}°C temp, {weather_data[1]}% humidity. Keep the treatment short"}]}]},
+            json={"contents": [{"parts": [{"text": prompt}]}]},
             headers={"Content-Type": "application/json"},
             timeout=30
         )
