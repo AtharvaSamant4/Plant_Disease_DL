@@ -250,6 +250,9 @@ def home():
 def about():
     return render_template('about.html')
 
+@app.route('/results')
+def about():
+    return render_template('results.html')
 @app.route('/upload')
 def upload():
     return render_template('upload.html')
