@@ -112,15 +112,28 @@ OPENCAGE_API_KEY = 'cb0e84b387ca439e973f121ae101cecc'
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
+
 def preprocess_image_for_plant(img_path, target_size):
-    """Preprocess image for plant classification"""
     img = image.load_img(img_path, target_size=target_size)
     img_gray = ImageOps.grayscale(img)
     img_array = np.array(img_gray)
-    return np.expand_dims(np.stack([img_array] * 3, axis=-1), axis=0)
+    img_array = np.stack([img_array] * 3, axis=-1)
+    return np.expand_dims(img_array, axis=0)
+
+def preprocess_image_for_plant2(img_path, target_size):
+    img = image.load_img(
+        img_path, 
+        color_mode='rgb',
+        target_size=target_size,
+        interpolation='bilinear'
+    )
+    img_array = image.img_to_array(img)  # Values 0-255
+    return np.expand_dims(img_array, axis=0)
+
+
 
 def preprocess_image_for_disease(img_path, target_size):
-    """Preprocess image for disease prediction"""
     img = image.load_img(img_path, target_size=target_size)
     img_array = image.img_to_array(img)
     return np.expand_dims(img_array, axis=0) / 255.0
@@ -161,45 +174,37 @@ def predict_disease(plant_type, img_path, weather_data):
         input_details = interpreter.get_input_details()
         output_details = interpreter.get_output_details()
 
-        # Debug: Print expected input shapes
-        print("\n[DEBUG] Model Input Requirements:")
-        for i, inp in enumerate(input_details):
-            print(f"Input {i}: {inp['name']} - Shape: {inp['shape']}")
+        # Debug input details
+        print("\n=== Disease Model Input Details ===")
+        print(f"Input 0: {input_details[0]['name']} - Shape: {input_details[0]['shape']}")
+        print(f"Input 1: {input_details[1]['name']} - Shape: {input_details[1]['shape']}")
 
-        # Preprocess image
+        # Preprocess image (shape: [1, 224, 224, 3])
         img_array = preprocess_image_for_disease(img_path, (224, 224))
-        print(f"\n[DEBUG] Raw image array shape: {img_array.shape}")
+        print(f"Image array shape: {img_array.shape}")
 
-        # Reshape image to match model input
-        target_img_shape = tuple([dim if dim != -1 else 1 for dim in input_details[0]['shape']])
-        if img_array.shape != target_img_shape:
-            print(f"[DEBUG] Reshaping image from {img_array.shape} to {target_img_shape}")
-            img_array = img_array.reshape(target_img_shape)
+        # Prepare weather data (shape: [1, 3])
+        weather_array = np.array(weather_data, dtype=np.float32).reshape(1, 3)
+        print(f"Weather array shape: {weather_array.shape}")
+
+        # Verify input shapes match model expectations
+        if img_array.shape != tuple(input_details[1]['shape']):
+            raise ValueError(f"Image shape mismatch. Model expects {input_details[1]['shape']}, got {img_array.shape}")
+
+        if weather_array.shape != tuple(input_details[0]['shape']):
+            raise ValueError(f"Weather shape mismatch. Model expects {input_details[0]['shape']}, got {weather_array.shape}")
+
+        # Set tensors with corrected order
+        interpreter.set_tensor(input_details[1]['index'], img_array)  # Image to second input
+        interpreter.set_tensor(input_details[0]['index'], weather_array)  # Weather to first input
         
-        # Prepare weather data
-        weather_array = np.array(weather_data, dtype=np.float32)
-        print(f"[DEBUG] Raw weather array shape: {weather_array.shape}")
-        
-        # Reshape weather data to match model input
-        target_weather_shape = tuple([dim if dim != -1 else 1 for dim in input_details[1]['shape']])
-        if weather_array.shape != target_weather_shape:
-            print(f"[DEBUG] Reshaping weather from {weather_array.shape} to {target_weather_shape}")
-            weather_array = weather_array.reshape(target_weather_shape)
-
-        # Verify final shapes
-        print("\n[DEBUG] Final Input Shapes:")
-        print(f"Image: {img_array.shape} (dtype: {img_array.dtype})")
-        print(f"Weather: {weather_array.shape} (dtype: {weather_array.dtype})")
-
-        # Set tensors
-        interpreter.set_tensor(input_details[0]['index'], img_array)
-        interpreter.set_tensor(input_details[1]['index'], weather_array)
         interpreter.invoke()
 
-        # Get predictions
+        # --------------------------------------------------
+        # 5. Process Output (Original Logic)
+        # --------------------------------------------------
         logits = interpreter.get_tensor(output_details[0]['index'])[0]
         
-        # Rest of your original processing logic
         disease_prefix = PLANT_TO_DISEASE_PREFIX.get(plant_type, '')
         valid_indices = [idx for idx, label in DISEASE_LABELS.items() 
                         if label.startswith(f"{disease_prefix}___")]
@@ -217,12 +222,9 @@ def predict_disease(plant_type, img_path, weather_data):
             key=lambda x: -x[1]
         )
 
-        # Confidence analysis
         top_confidence = predictions[0][1] if predictions else 0
-        confidence_gap = top_confidence - predictions[1][1] if len(predictions) > 1 else 0
-        
         confidence_level = "high" if top_confidence > 0.65 else \
-                         "medium" if confidence_gap > 0.15 else "low"
+                         "medium" if (top_confidence - predictions[1][1] > 0.15) else "low"
         
         clear_memory()
         return predictions[:TOP_K], confidence_level
@@ -279,6 +281,7 @@ def about():
 @app.route('/results')
 def results():
     return render_template('results.html')
+
 @app.route('/upload')
 def upload():
     return render_template('upload.html')
@@ -306,7 +309,7 @@ def analyze():
         input_details = interpreter.get_input_details()
         output_details = interpreter.get_output_details()  # ADD THIS LINE
         
-        img_array = preprocess_image_for_plant(save_path, (128, 128))
+        img_array = preprocess_image_for_plant2(save_path, (128, 128))
         interpreter.set_tensor(input_details[0]['index'], img_array.astype(np.float32))
         interpreter.invoke()
         
