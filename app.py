@@ -10,6 +10,7 @@ import re
 import cv2
 from opencage.geocoder import OpenCageGeocode
 from skimage.feature import graycomatrix, graycoprops
+import uuid  # Added for unique filename generation
 
 # Configure TensorFlow for low memory usage
 tf.config.threading.set_intra_op_parallelism_threads(2)
@@ -303,7 +304,13 @@ def analyze():
         return jsonify({"status": "error", "message": "Invalid file type"}), 400
 
     try:
-        filename = secure_filename(file.filename)
+        # Generate secure filename with fallback
+        original_filename = secure_filename(file.filename)
+        if not original_filename or original_filename == '':
+            filename = f"capture_{uuid.uuid4().hex[:8]}.jpg"
+        else:
+            filename = original_filename
+            
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(save_path)
 
