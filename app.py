@@ -247,7 +247,7 @@ def get_gemini_recommendation(disease_name, weather_data):
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
             json={"contents": [{"parts": [{"text": f"Provide treatment for {disease_name} considering: {weather_data[0]}°C temp, {weather_data[1]}% humidity"}]}]},
             headers={"Content-Type": "application/json"},
-            timeout=10
+            timeout=4
         )
         text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
         return re.sub(r'\*\*(.*?)\*\*', r'\1', text).replace('•', '➜')
