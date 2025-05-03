@@ -245,7 +245,7 @@ def get_gemini_recommendation(disease_name, weather_data):
     try:
         response = requests.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
-            json={"contents": [{"parts": [{"text": f"Provide treatment for {disease_name} considering: {weather_data[0]}°C temp, {weather_data[1]}% humidity"}]}]},
+            json={"contents": [{"parts": [{"text": f"Provide treatment for {disease_name} considering: {weather_data[0]}°C temp, {weather_data[1]}% humidity. Keep the treatment short"}]}]},
             headers={"Content-Type": "application/json"},
             timeout=30
         )
