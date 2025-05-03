@@ -275,10 +275,14 @@ def analyze():
         # Plant classification
         interpreter = load_model("plant")
         input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()  # ADD THIS LINE
+        
         img_array = preprocess_image_for_plant(save_path, (128, 128))
         interpreter.set_tensor(input_details[0]['index'], img_array.astype(np.float32))
         interpreter.invoke()
-        predictions = interpreter.get_tensor(input_details[0]['index'])[0]
+        
+        # CORRECTED PREDICTION LINE
+        predictions = interpreter.get_tensor(output_details[0]['index'])[0]
         
         top_k_idx = np.argsort(predictions)[-TOP_K:][::-1]
         plant_preds = [(PLANT_CLASS_NAMES[i], float(predictions[i])) for i in top_k_idx]
@@ -300,7 +304,6 @@ def analyze():
     except Exception as e:
         clear_memory()
         return jsonify({"status": "error", "message": f"Analysis failed: {str(e)}"}), 500
-
 @app.route('/confirm_plant', methods=['POST'])
 def confirm_plant():
     try:
