@@ -8,3 +8,4 @@ h5py==3.11.0
 protobuf==3.20.3
 Werkzeug==3.0.3
 opencv-python-headless==4.10.0.84
+gunicorn==22.0.0
