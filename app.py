@@ -219,7 +219,7 @@ def get_gemini_recommendation(disease_name, weather_data):
     try:
         response = requests.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
-            json={"contents": [{"parts": [{"text": prompt}]}],
+            json= {"contents": [{"parts": [{"text": prompt}]}]},
             headers={"Content-Type": "application/json"},
             timeout=10
         )
@@ -235,7 +235,7 @@ def reverse_geocoding(latitude, longitude):
     try:
         geocoder = OpenCageGeocode(OPENCAGE_API_KEY)
         results = geocoder.reverse_geocode(latitude, longitude)
-        return ", ".join([str(results[0]['components'].get(c, '') 
+        return ", ".join([str(results[0]['components'].get(c, '') )
                         for c in ["road", "city", "state", "country"]]) if results else "Location unavailable"
     except Exception as e:
         print(f"Geocoding error: {str(e)}")
