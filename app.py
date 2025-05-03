@@ -6,22 +6,42 @@ from werkzeug.utils import secure_filename
 from tensorflow.keras.preprocessing import image
 from PIL import ImageOps
 import requests
-import json
 import re
 from opencage.geocoder import OpenCageGeocode
-import gdown
 
-MODEL_URLS = {
-    "plant_vs_non_plant_model.h5": "https://drive.google.com/uc?id=18QcLMrAZq2Lbh3hlWEqXejL9cbS3kmXT",
-    "Plant_Classification_Architecture(Apple,Banana,etc).keras": "https://drive.google.com/uc?id=18tTN-huf5HvnJTRx7EitRKXheyyTeEwU",
-    "Plant_Disease_Predictor_with_Weather.keras": "https://drive.google.com/uc?id=1O_Ire7-TFwZ0QUj4ej6Rp2OwnmDaXXI1"
+# Configure TensorFlow for low memory usage
+tf.config.threading.set_intra_op_parallelism_threads(2)
+tf.config.threading.set_inter_op_parallelism_threads(2)
+tf.config.set_visible_devices([], 'GPU')  # Disable GPU
+
+# Model paths (using TFLite models from repo)
+MODEL_PATHS = {
+    "leaf": "Plant_vs_Nonplant.tflite",
+    "plant": "Plant_Classification_Model.tflite",
+    "disease": "Plant_Disease_Predictor_with_Weather.tflite"
 }
 
+# Lazy-loaded models
+_MODELS = {
+    "leaf": None,
+    "plant": None,
+    "disease": None
+}
 
-for model_file, url in MODEL_URLS.items():
-    if not os.path.exists(model_file):
-        print(f"Downloading {model_file} from Google Drive...")
-        gdown.download(url, model_file, quiet=False)
+def load_model(model_name):
+    """Lazy-load TFLite models"""
+    if _MODELS[model_name] is None:
+        interpreter = tf.lite.Interpreter(model_path=MODEL_PATHS[model_name])
+        interpreter.allocate_tensors()
+        _MODELS[model_name] = interpreter
+    return _MODELS[model_name]
+
+def clear_memory():
+    """Release model resources after each prediction"""
+    for key in _MODELS:
+        _MODELS[key] = None
+    tf.keras.backend.clear_session()
+
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -31,7 +51,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
 TOP_K = 3
 HIGH_CONFIDENCE_THRESHOLD = 0.9
 PLANT_CLASS_NAMES = ['Apple', 'Cherry', 'Corn', 'Grape', 'Orange', 'Peach', 
-                     'Pepper_bell', 'Potato', 'Soybean', 'Strawberry', 'Tomato']
+                    'Pepper_bell', 'Potato', 'Soybean', 'Strawberry', 'Tomato']
 
 PLANT_TO_DISEASE_PREFIX = {
     'Apple': 'Apple',
@@ -84,12 +104,7 @@ DISEASE_LABELS = {
     33: 'Tomato___healthy'
 }
 
-# Load models
-LEAF_MODEL = tf.keras.models.load_model("plant_vs_non_plant_model.h5")
-PLANT_MODEL = tf.keras.models.load_model("Plant_Classification_Architecture(Apple,Banana,etc).keras")
-DISEASE_MODEL = tf.keras.models.load_model("Plant_Disease_Predictor_with_Weather.keras")
-
-# API Keys
+# API Keys (Consider using environment variables in production)
 WEATHER_API_KEY = "1020a5b033aee42c4874144d88e5dade"
 GEMINI_API_KEY = "AIzaSyBqQDeTQ_RwTvrsjz8D9XtozGUWw2vZoIk"
 OPENCAGE_API_KEY = 'cb0e84b387ca439e973f121ae101cecc'
@@ -98,26 +113,23 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def preprocess_image_for_plant(img_path, target_size):
+    """Preprocess image for plant classification"""
     img = image.load_img(img_path, target_size=target_size)
     img_gray = ImageOps.grayscale(img)
     img_array = np.array(img_gray)
-    img_array = np.stack([img_array] * 3, axis=-1)
-    return np.expand_dims(img_array, axis=0)
+    return np.expand_dims(np.stack([img_array] * 3, axis=-1), axis=0)
 
 def preprocess_image_for_disease(img_path, target_size):
+    """Preprocess image for disease prediction"""
     img = image.load_img(img_path, target_size=target_size)
     img_array = image.img_to_array(img)
     return np.expand_dims(img_array, axis=0) / 255.0
 
-def get_predictions(model, img_array):
-    predictions = model.predict(img_array)[0]
-    top_k_idx = np.argsort(predictions)[-TOP_K:][::-1]
-    return [(PLANT_CLASS_NAMES[i], float(predictions[i])) for i in top_k_idx]
-
 def get_weather_data(latitude, longitude):
+    """Fetch weather data from OpenWeatherMap"""
     url = f'http://api.openweathermap.org/data/2.5/weather?lat={latitude}&lon={longitude}&appid={WEATHER_API_KEY}&units=metric'
     try:
-        response = requests.get(url)
+        response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             return [
@@ -130,23 +142,37 @@ def get_weather_data(latitude, longitude):
     return [25.0, 60.0, 0.0]  # Default values
 
 def detect_leaf(image_path):
+    """Detect if image contains a plant leaf"""
+    interpreter = load_model("leaf")
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    
     img_array = preprocess_image_for_plant(image_path, (224, 224))
-    return LEAF_MODEL.predict(img_array)[0][0]
+    interpreter.set_tensor(input_details[0]['index'], img_array.astype(np.float32))
+    interpreter.invoke()
+    prediction = interpreter.get_tensor(output_details[0]['index'])
+    clear_memory()
+    return prediction[0][0]
 
-def predict_disease(plant_type, img_path, weather_data, temperature=0.3):
+def predict_disease(plant_type, img_path, weather_data):
+    """Predict plant disease with weather context"""
     try:
+        interpreter = load_model("disease")
+        input_details = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
+        
         # Preprocess inputs
         img_array = preprocess_image_for_disease(img_path, (224, 224))
-        weather_array = np.array(weather_data).reshape(1, -1)
+        weather_array = np.array(weather_data).reshape(1, -1).astype(np.float32)
         
-        # Get predictions
-        logits = DISEASE_MODEL.predict([img_array, weather_array])[0]
+        # Set multi-input tensors
+        interpreter.set_tensor(input_details[0]['index'], img_array)
+        interpreter.set_tensor(input_details[1]['index'], weather_array)
+        interpreter.invoke()
         
-        # Apply temperature scaling with tie-breaking
-        scaled_logits = logits / temperature
-        scaled_logits += np.random.normal(0, 1e-6, scaled_logits.shape)  # Break exact ties
+        logits = interpreter.get_tensor(output_details[0]['index'])[0]
         
-        # Filter valid diseases for the plant type
+        # Filter valid diseases for plant type
         disease_prefix = PLANT_TO_DISEASE_PREFIX.get(plant_type, '')
         valid_indices = [idx for idx, label in DISEASE_LABELS.items() 
                         if label.startswith(f"{disease_prefix}___")]
@@ -154,12 +180,11 @@ def predict_disease(plant_type, img_path, weather_data, temperature=0.3):
         if not valid_indices:
             return [('Unknown Disease', 1.0)], "high"
             
-        # Apply softmax to valid classes
-        valid_logits = scaled_logits[valid_indices]
+        # Process predictions
+        valid_logits = logits[valid_indices]
         exp_logits = np.exp(valid_logits - np.max(valid_logits))
         probs = exp_logits / exp_logits.sum()
         
-        # Create sorted predictions
         predictions = sorted(
             [(DISEASE_LABELS[valid_indices[i]], float(probs[i])) 
             for i in range(len(valid_indices))],
@@ -170,25 +195,19 @@ def predict_disease(plant_type, img_path, weather_data, temperature=0.3):
         top_confidence = predictions[0][1] if predictions else 0
         confidence_gap = top_confidence - predictions[1][1] if len(predictions) > 1 else 0
         
-        # Determine confidence level
-        if top_confidence > 0.65:
-            confidence_level = "high"
-        elif confidence_gap > 0.15:
-            confidence_level = "medium"
-        else:
-            confidence_level = "low"
-            predictions = predictions[:3]  # Return only top prediction when uncertain
-
+        confidence_level = "high" if top_confidence > 0.65 else \
+                         "medium" if confidence_gap > 0.15 else "low"
+        
+        clear_memory()
         return predictions[:TOP_K], confidence_level
 
     except Exception as e:
+        clear_memory()
         print(f"Disease prediction error: {str(e)}")
         return [], "unknown"
 
-def clean_markdown(text):
-    return re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-
 def get_gemini_recommendation(disease_name, weather_data):
+    """Get treatment recommendations from Gemini API"""
     if "healthy" in disease_name.lower():
         return "Plant is healthy. Maintain current care practices."
     
@@ -200,34 +219,29 @@ def get_gemini_recommendation(disease_name, weather_data):
     try:
         response = requests.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}",
-            json={
-                "contents": [{
-                    "parts": [{"text": prompt}]
-                }]
-            },
-            headers={"Content-Type": "application/json"}
+            json={"contents": [{"parts": [{"text": prompt}]}],
+            headers={"Content-Type": "application/json"},
+            timeout=10
         )
         response.raise_for_status()
         text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
-        return clean_markdown(text).replace('•', '➜')
+        return re.sub(r'\*\*(.*?)\*\*', r'\1', text).replace('•', '➜')
     except Exception as e:
         print(f"Gemini API error: {str(e)}")
         return "Recommendation unavailable. Please consult an agricultural expert."
 
 def reverse_geocoding(latitude, longitude):
+    """Convert coordinates to readable location"""
     try:
         geocoder = OpenCageGeocode(OPENCAGE_API_KEY)
         results = geocoder.reverse_geocode(latitude, longitude)
-        
-        if results:
-            return normalize_address(results[0]['components'])
-        
-        return "Location unavailable"
-        
+        return ", ".join([str(results[0]['components'].get(c, '') 
+                        for c in ["road", "city", "state", "country"]]) if results else "Location unavailable"
     except Exception as e:
         print(f"Geocoding error: {str(e)}")
         return "Service unavailable"
 
+# Flask Routes
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -239,10 +253,6 @@ def about():
 @app.route('/upload')
 def upload():
     return render_template('upload.html')
-
-@app.route('/results.html')
-def results():
-    return render_template('results.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -259,125 +269,70 @@ def analyze():
         file.save(save_path)
 
         # Leaf detection
-        leaf_value = detect_leaf(save_path)
-        if leaf_value > 0.5:
+        if detect_leaf(save_path) > 0.5:
             return jsonify({"status": "error", "message": "Please upload a clear plant leaf image"}), 400
 
         # Plant classification
+        interpreter = load_model("plant")
+        input_details = interpreter.get_input_details()
         img_array = preprocess_image_for_plant(save_path, (128, 128))
-        plant_preds = get_predictions(PLANT_MODEL, img_array)
+        interpreter.set_tensor(input_details[0]['index'], img_array.astype(np.float32))
+        interpreter.invoke()
+        predictions = interpreter.get_tensor(input_details[0]['index'])[0]
+        
+        top_k_idx = np.argsort(predictions)[-TOP_K:][::-1]
+        plant_preds = [(PLANT_CLASS_NAMES[i], float(predictions[i])) for i in top_k_idx]
         best_plant, best_conf = plant_preds[0]
-
-        # Print plant predictions
-        print("\n=== Top Plant Predictions ===")
-        for i, (plant, conf) in enumerate(plant_preds, 1):
-            print(f"{i}. {plant}: {conf*100:.2f}%")
 
         response_data = {
             "predictions": [{"class": p[0], "confidence": p[1]} for p in plant_preds],
             "top_confidence": best_conf,
-            "filename": filename
+            "filename": filename,
+            "status": "direct_success" if best_conf >= HIGH_CONFIDENCE_THRESHOLD else "needs_confirmation",
+            "final_prediction": best_plant if best_conf >= HIGH_CONFIDENCE_THRESHOLD else None,
+            "message": "High confidence prediction" if best_conf >= HIGH_CONFIDENCE_THRESHOLD 
+                      else "Please confirm plant type"
         }
 
-        if best_conf >= HIGH_CONFIDENCE_THRESHOLD:
-            response_data.update({
-                "status": "direct_success",
-                "final_prediction": best_plant,
-                "message": "High confidence prediction - proceeding to disease detection"
-            })
-        else:
-            response_data.update({
-                "status": "needs_confirmation",
-                "message": "Please confirm plant type"
-            })
-
+        clear_memory()
         return jsonify(response_data)
 
     except Exception as e:
+        clear_memory()
         return jsonify({"status": "error", "message": f"Analysis failed: {str(e)}"}), 500
 
 @app.route('/confirm_plant', methods=['POST'])
 def confirm_plant():
     try:
-        if not request.is_json:
-            return jsonify({"status": "error", "message": "Invalid request format"}), 400
-            
         data = request.get_json()
         selected_plant = data.get('plant')
         filename = data.get('filename')
         latitude = data.get('latitude')
         longitude = data.get('longitude')
         
-        if not selected_plant:
-            return jsonify({"status": "error", "message": "No plant selected"}), 400
+        if not selected_plant or selected_plant == "not_listed":
+            return jsonify({"status": "error", "message": "Invalid plant selection"}), 400
         
-        if selected_plant == "not_listed":
-            return jsonify({"status": "unknown_plant", "message": "This plant is not in our database"}), 400
-        
-        # Get weather data
         weather_data = get_weather_data(latitude, longitude)
-        
-        # Get disease predictions
-        # [28.5, 85.0, 5.0] for Corn Common Rust
-        # [25.0, 90.0, 6.0] for potato early blight
-        # [17.0, 92.0, 8.0] for apple scab
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(filename))
-        disease_preds, confidence_level = predict_disease(selected_plant, save_path,[25.0, 90.0, 6.0])
+        disease_preds, confidence_level = predict_disease(selected_plant, save_path, weather_data)
 
-        # Print disease predictions
-        print(f"\n=== Disease Predictions ({confidence_level.capitalize()} Confidence) ===")
-        for i, (name, conf) in enumerate(disease_preds, 1):
-            print(f"{i}. {name}: {conf*100:.2f}%")
-
-        # Generate recommendations
-        results = []
-        warnings = []
-        for name, confidence in disease_preds:
-            results.append({
-                "name": name,
-                "confidence": confidence,
-                "recommendation": get_gemini_recommendation(name, weather_data)
-            })
-        
-        if confidence_level == "low":
-            warnings.append("Low confidence results - consider expert consultation")
+        results = [{
+            "name": name,
+            "confidence": confidence,
+            "recommendation": get_gemini_recommendation(name, weather_data)
+        } for name, confidence in disease_preds]
 
         return jsonify({
             "status": "success",
             "plant": selected_plant,
             "diseases": results,
-            "warnings": warnings,
-            "location": reverse_geocoding(latitude, longitude),
-            "message": "Plant confirmed - Disease detection completed"
+            "warnings": ["Low confidence results - consider expert consultation"] if confidence_level == "low" else [],
+            "location": reverse_geocoding(latitude, longitude)
         })
-       
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-def normalize_address(raw_address):
-    # Standardize administrative hierarchy
-    components = [
-        "road", "suburb", "city_district", "city", 
-        "state", "postcode", "country"
-    ]
-    
-    standardized = []
-    for comp in components:
-        if comp in raw_address:
-            standardized.append(str(raw_address[comp]))
-    
-    return ", ".join(standardized)
-
-
-# @app.route('/disease_results')
-# def disease_results():
-#     try:
-#         plant = request.args.get('plant', 'Unknown Plant')
-#         diseases_json = request.args.get('diseases', '[]')
-#         diseases = json.loads(diseases_json)
-#         return render_template('disease.html', plant=plant, diseases=diseases)
-#     except Exception as e:
-#         return render_template('error.html', message="Could not load results")
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
