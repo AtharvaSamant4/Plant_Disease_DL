@@ -502,213 +502,9 @@ body::after {
   animation-delay: 12s;
   animation-duration: 14s;
 }
-.camera-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.9);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
-}
-
-.camera-container {
-  background: white;
-  border-radius: 15px;
-  width: 90%;
-  max-width: 600px;
-  padding: 1rem;
-  position: relative;
-}
-
-.camera-preview {
-  width: 100%;
-  height: 400px;
-  object-fit: cover;
-  border-radius: 10px;
-  margin: 1rem 0;
-  transform: scaleX(-1); /* Mirror effect for front camera */
-}
-
-.camera-controls {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  padding: 1rem;
-}
-
-.camera-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid #ddd;
-}
-
-.upload-options {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.upload-option-btn {
-  flex: 1;
-  padding: 1rem;
-  border: 2px dashed var(--primary-color);
-  border-radius: 12px;
-  background: rgba(255,255,255,0.9);
-  transition: all 0.3s ease;
-}
-
-.upload-option-btn:hover {
-  background: var(--accent-color);
-  transform: translateY(-3px);
-}
-
-@media (max-width: 576px) {
-  .camera-preview {
-    height: 300px;
-  }
-  
-  .upload-options {
-    flex-direction: column;
-  }
-}
-.img-preview {
-  width: 100%;
-  max-height: 350px;
-  object-fit: cover;
-  border-radius: 15px;
-  margin-top: 1.5rem;
-  /* Remove display: none */
-  border: 3px solid var(--primary-color);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-  opacity: 1;
-  transform: translateY(0);
-  transition: all 0.5s ease-in-out;
-}
-
-.img-hidden {
-  opacity: 0;
-  transform: translateY(-20px);
-  height: 0;
-  margin: 0;
-}
-/* Camera Modal Styles */
-.camera-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.9);
-  z-index: 1000;
-  justify-content: center;
-  align-items: center;
-}
-
-.camera-container {
-  background: black;
-  width: 100%;
-  height: 100%;
-}
-
-.camera-preview {
-  width: 100%;
-  height: 70vh;
-  object-fit: cover;
-  transform: scaleX(-1);
-}
-
-.camera-controls {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0,0,0,0.7);
-  padding: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.btn-circle {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-capture {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: white;
-  border: 4px solid var(--primary-color);
-  position: relative;
-}
-
-/* Mobile Optimization */
-@media (max-width: 768px) {
-  .camera-header {
-    padding: 1rem;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    position: fixed;
-    top: 0;
-    width: 100%;
-  }
-  
-  .upload-option-btn {
-    padding: 1.2rem;
-    font-size: 1.1rem;
-  }
-}
-
-@media (hover: none) {
-  .upload-option-btn:hover {
-    transform: none;
-    background: rgba(255,255,255,0.9);
-  }
-}
   </style>
 </head>
 <body>
-<!-- Add this immediately after <body> -->
-  <div class="camera-modal" id="cameraModal">
-    <div class="camera-container">
-      <div class="camera-header mobile-header">
-        <button class="btn btn-back" onclick="closeCamera()">
-          <i class="fas fa-arrow-left"></i>
-        </button>
-        <h5>Take Plant Photo</h5>
-        <div class="header-spacer"></div>
-      </div>
-      <div class="camera-wrapper">
-        <video id="cameraFeed" class="camera-preview" autoplay playsinline></video>
-        <div class="focus-ring"></div>
-      </div>
-      <div class="camera-controls">
-        <button class="btn btn-circle btn-lg btn-danger" onclick="closeCamera()">
-          <i class="fas fa-times"></i>
-        </button>
-        <button class="btn btn-capture" onclick="capturePhoto()">
-          <div class="capture-ring"></div>
-        </button>
-        <button class="btn btn-circle btn-lg btn-light" 
-                onclick="toggleCamera()"
-                id="flipCamera">
-          <i class="fas fa-camera-retro"></i>
-        </button>
-      </div>
-    </div>
-  </div>
   <div class="leaf-particle"></div>
 <div class="leaf-particle"></div>
 <div class="leaf-particle"></div>
@@ -717,19 +513,10 @@ body::after {
   <div class="upload-container">
     <h2 class="text-center mb-4">PlantGuard Diagnosis</h2>
     <form id="uploadForm">
-      <!-- Replace existing file input with this -->
-<div class="mb-3">
-  <div class="upload-options">
-    <button type="button" class="upload-option-btn" onclick="openCamera()">
-      <i class="fas fa-camera"></i> Use Camera
-    </button>
-    <button type="button" class="upload-option-btn" onclick="document.getElementById('imageInput').click()">
-      <i class="fas fa-upload"></i> Upload Photo
-    </button>
-  </div>
-  <input type="file" class="form-control" id="imageInput" accept="image/*" hidden />
-  <img id="previewImg" class="img-preview mt-3" style="display: none;" />
-</div>
+      <div class="mb-3">
+        <input type="file" class="form-control" id="imageInput" accept="image/*" />
+        <img id="previewImg" class="img-preview mt-3" />
+      </div>
       <button type="submit" class="btn beautiful-button w-100">
         <span class="spinner-border spinner-border-sm d-none" id="spinner"></span>
         Start Diagnosis
@@ -737,7 +524,6 @@ body::after {
     </form>
     <div id="resultsSection"></div>
   </div>
-  
 
   <!-- Keep all original JavaScript -->
   <script>
@@ -879,8 +665,8 @@ body::after {
   localStorage.setItem("plant", data.plant);
   localStorage.setItem("location", data.location);
   // Get the user's location
-  // window.location.href = "results.html";
   window.location.href = "/results";
+
     
   } 
 
@@ -1024,135 +810,6 @@ body::after {
         }
         typeWriter();
     }
-
-    let cameraStream = null;
-
-async function openCamera() {
-  try {
-    const video = document.getElementById('cameraFeed');
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { 
-        facingMode: 'environment', // Prefer rear camera
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
-    });
-    video.srcObject = cameraStream;
-    document.getElementById('cameraModal').style.display = 'flex';
-  } catch (error) {
-    showError('Camera access denied. Please enable camera permissions.');
-  }
-}
-
-function closeCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(track => track.stop());
-    cameraStream = null;
-  }
-  document.getElementById('cameraModal').style.display = 'none';
-}
-
-function capturePhoto() {
-  const video = document.getElementById('cameraFeed');
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  const previewImg = document.getElementById('previewImg');
-  
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  
-  canvas.toBlob(blob => {
-    const file = new File([blob], 'plant-photo.jpg', { type: 'image/jpeg' });
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
-    
-    // Update file input and preview
-    document.getElementById('imageInput').files = dataTransfer.files;
-    previewImg.src = URL.createObjectURL(blob);
-    previewImg.style.display = 'block'; // Ensure preview is visible
-    previewImg.classList.remove('img-hidden'); // Remove hiding class
-    
-    // Trigger preview animation
-    setTimeout(() => {
-      previewImg.style.opacity = '1';
-      previewImg.style.transform = 'translateY(0)';
-    }, 50);
-    
-    currentFilename = file.name;
-    closeCamera();
-  }, 'image/jpeg', 0.9);
-}
-
-// Update existing event listener to handle both upload methods
-document.getElementById('imageInput').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  const previewImg = document.getElementById('previewImg');
-  if (file) {
-    previewImg.classList.remove('img-hidden');
-    previewImg.style.display = 'block';
-    previewImg.src = URL.createObjectURL(file);
-    currentFilename = file.name;
-  }
-});
-// Camera Functions
-
-let currentCamera = 'environment';
-
-async function openCamera() {
-  try {
-    const video = document.getElementById('cameraFeed');
-    const constraints = {
-      video: { 
-        facingMode: currentCamera,
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      }
-    };
-    
-    cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = cameraStream;
-    document.getElementById('cameraModal').style.display = 'flex';
-  } catch (error) {
-    showError('Camera access required. Please enable permissions.');
-  }
-}
-
-function closeCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(track => track.stop());
-    cameraStream = null;
-  }
-  document.getElementById('cameraModal').style.display = 'none';
-}
-
-function toggleCamera() {
-  currentCamera = currentCamera === 'user' ? 'environment' : 'user';
-  closeCamera();
-  setTimeout(openCamera, 300);
-}
-
-// Capture Function
-function capturePhoto() {
-  const video = document.getElementById('cameraFeed');
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  
-  canvas.toBlob(blob => {
-    const file = new File([blob], 'plant-photo.jpg', { type: 'image/jpeg' });
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
-    
-    document.getElementById('imageInput').files = dataTransfer.files;
-    document.getElementById('previewImg').src = URL.createObjectURL(blob);
-    document.getElementById('previewImg').style.display = 'block';
-    closeCamera();
-  }, 'image/jpeg', 0.9);
-}
   </script>
 </body>
 </html>
