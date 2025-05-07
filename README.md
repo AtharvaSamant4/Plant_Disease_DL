@@ -27,13 +27,13 @@ This project is a lightweight yet powerful web app for plant disease detection u
    -- python app.py
 
 
-🛠 Tech Stack
+🛠 Tech Stack: 
 Python, Flask
 TensorFlow Lite
 HTML, CSS
 OpenWeatherMap API
 
-📌 To-Do / Enhancements
+📌 To-Do / Enhancements: 
 Add UI for mobile
 Expand to more plants
 Upload history for users
