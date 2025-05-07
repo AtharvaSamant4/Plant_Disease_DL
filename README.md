@@ -11,6 +11,9 @@ This project is a lightweight yet powerful web app for plant disease detection u
 - 🎯 **Top-K Predictions**: Displays multiple possible diseases with confidence scores
 - 🌐 **Flask Web App Interface**: User-friendly UI for image upload and results
 
+🔗 Live Demo
+🌐 Try it now: https://plant-disease-dl.onrender.com/
+
 
 ## 🔧 Installation & Setup
 
