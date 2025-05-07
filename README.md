@@ -17,29 +17,29 @@ This project is a lightweight yet powerful web app for plant disease detection u
 
 ## 🔧 Installation & Setup
 
-1. Clone the repository
-    --git clone https://github.com/yourusername/plant-disease-weather-tflite.git
+## 1. Clone the repository
+    --git clone https://github.com/AtharvaSamant4/Plant_Disease_DL.git
 
-2. Install the required packages
+## 2. Install the required packages
    -- pip install -r requirements.txt
 
-3. Start the Flask server
+## 3. Start the Flask server
    -- python app.py
 
 
-🛠 Tech Stack: 
+## 🛠 Tech Stack: 
 Python, Flask
 TensorFlow Lite
 HTML, CSS
 OpenWeatherMap API
 
-📌 To-Do / Enhancements: 
+## 📌 To-Do / Enhancements: 
 Add UI for mobile
 Expand to more plants
 Upload history for users
 
 
-👤 Author
+## 👤 Author
 Atharva Samant
 https://github.com/AtharvaSamant4
 
