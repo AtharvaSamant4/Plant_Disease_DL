@@ -130,9 +130,11 @@ PLANT_TO_DISEASE_PREFIX = {
     'Strawberry': 'Strawberry',
     'Tomato': 'Tomato'
 }
-WEATHER_API_KEY = "1020a5b033aee42c4874144d88e5dade"
-GEMINI_API_KEY = "AIzaSyBqQDeTQ_RwTvrsjz8D9XtozGUWw2vZoIk"
-OPENCAGE_API_KEY = 'cb0e84b387ca439e973f121ae101cecc'
+
+WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OPENCAGE_API_KEY = os.getenv("OPENCAGE_API_KEY")
+
 
 leaf_detector = LeafDetector()
 
